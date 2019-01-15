@@ -19,7 +19,6 @@ opp_steals_url = "https://www.teamrankings.com/nba/stat/opponent-steals-per-game
 season_stat_url = "http://www.basketball-reference.com/leagues/NBA_2017_totals.html"
 season_advanced_url = "http://www.basketball-reference.com/leagues/NBA_2017_advanced.html"
 
-salary_url = "http://hoopshype.com/salaries/players/"
 salary_path = "/home/ben/Downloads/DKSalaries.csv"
 
 #DraftKings NBA Classic scoring
@@ -33,7 +32,7 @@ TOV = -0.5
 #2 PG, 2 SG, 2 SF, 2 PF, 1 C
 salary_cap = 50000
 PG_cap = 2
-SG_cap = 2
+SG_cap = 1
 SF_cap = 2
 PF_cap = 2
 C_cap = 1
@@ -75,6 +74,9 @@ def get_stat_series(url, ctx):
 	#get in series and sort it
 	stat_series = pandas.Series(stat_data, index=team_index, name=stat_cat)
 	stat_series = stat_series.sort_index()
+
+	print stats_series
+
 	return stat_series
 
 #get season stats from basketball reference
@@ -297,30 +299,34 @@ def greedy_knap(avail_players):
 	#get player names in a list
 	best_squad = []
 	for pos in squad:
-		for player in pos[3]:
-			best_squad.append(player)
+		pos_players = []
+		pos_players.append(pos[0])
+		pos_players.append(pos[3])
+
+		best_squad.append(pos_players)
 
 	return best_squad
 
 def stringify_lineup(line):
 	go_2 = range(2)
-	positions = ["Point Guards", "Shooting Guards", "Small Forwards", "Power Forwards"]
+	positions = ["Point Guards", "Shooting Guard", "Small Forwards", "Power Forwards", "Center"]
 
-	stringy_line = "Optimal FanDuel Lineup for Today \n \n"
+	stringy_line = "Optimal DraftKings Lineup for Today \n \n"
 
 	counter = 0
 	for position in positions:
 		stringy_line += position
 		stringy_line += ": \n"
-		for player in go_2:
-			stringy_line += line[counter]
-			stringy_line += "\n"
-			counter += 1
-		stringy_line += "\n"
 
-	stringy_line += "Center:\n"
-	stringy_line += line[counter]
-	stringy_line += "\n"
+		pos_players = line[counter][1]
+
+		for player in pos_players:
+			stringy_line += player
+			stringy_line += "\n"
+		
+		counter += 1
+
+		stringy_line += "\n"
 
 	return stringy_line
 
