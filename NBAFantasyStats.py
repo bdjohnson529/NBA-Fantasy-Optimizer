@@ -138,9 +138,9 @@ def get_current_salary(url, ctx):
 #get mean, standard error dataframe for a dataframe
 def get_desc_stats(df):
 	means = df.mean()
-	means = means.rename("mean")
+	means = means.rename({1:"mean"})
 	stdevs = df.std()
-	stdevs = stdevs.rename("stdev")
+	stdevs = stdevs.rename({1:"stdev"})
 	desc_stats = pandas.concat([means, stdevs], axis=1)
 	return desc_stats
 
