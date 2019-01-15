@@ -1,6 +1,5 @@
 #The Porzingis Script
 #Author: Owen Auch
-#Philippians 3:8
 
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
@@ -19,18 +18,20 @@ opp_blocks_url = "https://www.teamrankings.com/nba/stat/opponent-blocks-per-game
 opp_steals_url = "https://www.teamrankings.com/nba/stat/opponent-steals-per-game"
 season_stat_url = "http://www.basketball-reference.com/leagues/NBA_2017_totals.html"
 season_advanced_url = "http://www.basketball-reference.com/leagues/NBA_2017_advanced.html"
-salary_url = "http://hoopshype.com/salaries/players/"
 
-#FanDuel points per stat
+salary_url = "http://hoopshype.com/salaries/players/"
+salary_path = "/home/ben/Downloads/DKSalaries.csv"
+
+#DraftKings NBA Classic scoring
 POINT = 1
-REBOUND = 1.2
+REBOUND = 1.25
 ASSIST = 1.5
 STEAL = 2
 BLOCK = 2
-TOV = -1
+TOV = -0.5
 
 #2 PG, 2 SG, 2 SF, 2 PF, 1 C
-salary_cap = 999999999999999999999999
+salary_cap = 50000
 PG_cap = 2
 SG_cap = 2
 SF_cap = 2
@@ -111,28 +112,27 @@ def get_season_stats(url, ctx):
 	season_df = pandas.DataFrame(season_data, columns=column_names)
 	return season_df
 
-def get_current_salary(url, ctx):
-	salary_soup = soupify(url, ctx)
+def get_current_salary(path, ctx):
 
-	table = salary_soup.find('table', class_ = "hh-salaries-ranking-table")
-	rows = table.find_all('tr')
 	salary_data = []
-	#because it's weird
-	counter = 0;
-	for row in rows:
-		if counter > 0:
-			salary_data_row = []
-			#add player name
-			player_name = row.find("a").find(text=True)
-			salary_data_row.append(player_name.strip())
-			#add salary
-			salary = (row.find('td', class_ = "hh-salaries-sorted")["data-value"])
-			salary = salary.replace(",","")
-			salary_data_row.append(float(salary))
-			salary_data.append(salary_data_row)
-		counter += 1
+	counter = 0
+
+	with open(path, 'rb') as csvfile:
+		salary_sheet = csv.reader(csvfile, delimiter=',')
+		for row in salary_sheet:
+			if counter > 0:
+				salary_data_row = []
+				#add player name
+				player_name = row[2]
+				salary_data_row.append(player_name.strip())
+				#add salary
+				salary = row[5]
+				salary_data_row.append(float(salary))
+				salary_data.append(salary_data_row)
+			counter += 1
 
 	salary_df = pandas.DataFrame(salary_data, columns = ["Player", "Salary"])
+
 	return salary_df
 
 #get mean, standard error dataframe for a dataframe
@@ -401,7 +401,7 @@ if __name__ == "__main__":
 	# df_list.append(advanced_desc_df)
 
 	#call method to get salaries for players playing tonight
-	salary_df = get_current_salary(salary_url, ctx)
+	salary_df = get_current_salary(salary_path, ctx)
 	salary_desc_df = get_desc_stats(salary_df)
 	df_list.append(salary_df)
 	df_list.append(salary_desc_df)
