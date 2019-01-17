@@ -7,7 +7,7 @@ from pathlib2 import Path
 NUM_RECENT_GAMES = 10
 
 salary_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\DKSalaries.csv"
-save_dir = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer"
+save_dir = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\Historic_Stats"
 recent_stats_csv = save_dir + "\\nba_recent_" + str(NUM_RECENT_GAMES) + "_games.csv"
 
 if __name__ == "__main__":
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
 	# get stats from the most recent X games
 	X = NUM_RECENT_GAMES
-	recent_stats  = get_recent_stats(game_list, todays_date, season_df, x=X)
+	recent_stats  = get_historic_stats(game_list, todays_date, x=10)
 	recent_stats.to_csv(recent_stats_csv, sep=",")
 	
 	recent_stats = drop_injured_players(game_list, recent_stats)

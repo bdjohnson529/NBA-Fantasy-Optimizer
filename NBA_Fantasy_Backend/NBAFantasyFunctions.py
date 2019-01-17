@@ -6,13 +6,12 @@ from BS4Functions import *
 
 import csv
 import pandas
-from sys import version_info
+from PandasFunctions import *
 
+from sys import version_info
 from datetime import date
 
-from date_conversion import *
-from team_conversion import *
-from opp_stat_conversion import *
+from NameConversions import *
 
 # Turn off pandas warnings
 pandas.options.mode.chained_assignment = None  # default='warn'
@@ -53,8 +52,8 @@ C_cap = 1
 NBA Functions
 '''
 
-def get_schedule(url, todays_date):
-	today = convert_date(todays_date)
+def get_schedule(url, date_of_interest):
+	today = convert_date(date_of_interest)
 
 	schedule_soup = soupify(url)
 	table = schedule_soup.find('table', class_="stats_table")
@@ -73,8 +72,8 @@ def get_schedule(url, todays_date):
 			h_td = row.find('td', {"data-stat":"home_team_name"})
 			home = h_td.find(text=True)
 
-			visitor = convert_team_name(visitor)
-			home = convert_team_name(home)
+			visitor = convert_team_to_abbreviation(visitor)
+			home = convert_team_to_abbreviation(home)
 
 			game = [home, visitor]
 			game_list.append(game)
@@ -98,16 +97,23 @@ def get_injured_players(game_list):
 			inj_comment = inj.find(string=lambda text:isinstance(text,Comment))
 			inj_soup = BeautifulSoup(inj_comment, "lxml")
 			tbody = inj_soup.find('tbody')
-			players = tbody.find_all('th', attrs={"data-stat":"player"})
 
-			for player in players:
+			tr = tbody.find_all('tr')
+
+			player_status = []
+			for entry in tr:
+				player = entry.find('th', attrs={"data-stat":"player"})
 				player_name = player.find(text=True)
-				player_list.append(player_name.strip())
+				status = entry.find('td', attrs={"data-stat":"note"})
+
+				if "Out" in str(status):
+					player_list.append(player_name.strip())
+
 
 	return player_list
 
 def get_box_scores(box_url, team):
-
+	
 	# bs4 magic
 	box_soup = soupify(box_url)
 	table_id = "box_" + team.lower() + "_basic"
@@ -149,6 +155,7 @@ def get_box_scores(box_url, team):
 		# change minutes to float
 		for col in cols[:1]:
 			stat = col.find(text=True)
+
 			min_sec = stat.split(":")
 			time = float(min_sec[0]) + float(min_sec[1])/60
 			box_data_row.append(time)
@@ -167,10 +174,17 @@ def get_box_scores(box_url, team):
 
 	return box_df
 
-def get_recent_team_data(team, todays_date, x=10):
+def get_historic_team_data(team, cutoff_date, x=10):
+
+	yesterdays_url = get_yesterdays_url()
+	cutoff_url = create_date_url(cutoff_date)
+
+	if (cutoff_url > yesterdays_url):
+		print "Cutoff date specified is too recent. Using yesterday's date instead."
+		cutoff_url = yesterdays_url
 
 	print "\n"
-	print "Retrieving recent ", team, " data from past ", x, "games. \n"
+	print "Retrieving recent ", team, " data. Starting on ", convert_date_url(cutoff_url), " and back ", x, "games. \n"
 
 	team_url = "https://www.basketball-reference.com/teams/" + team + "/2019_games.html"
 	game_soup = soupify(team_url)
@@ -179,8 +193,6 @@ def get_recent_team_data(team, todays_date, x=10):
 	table = game_soup.find('table', attrs={"id":"games"})
 	table_body = table.find('tbody')
 	tr = table_body.findChildren('tr')
-
-	today_url = create_date_url(todays_date)
 
 	# create list of box score urls and dates
 	date_url_list = []
@@ -196,17 +208,20 @@ def get_recent_team_data(team, todays_date, x=10):
 
 	# reverse list
 	date_url_list = date_url_list[::-1]
+
 	# start searching at the end of the list
 	i = 0
 	j = 0
 	for entry in date_url_list:
-		i = i+1
+
 		date = entry[0]
-		if (date >= today_url):
+		if (date > cutoff_url):
+			i = i+1
 			continue
 
 		j = i
 		break
+
 
 	# use most recent x games
 	recent_urls = date_url_list[j:j+x]
@@ -248,20 +263,14 @@ def get_recent_team_data(team, todays_date, x=10):
 
 	return team_recent_df
 
-def shift_df_column(df_og, attribute, new_pos=0, axis=0):
-	# move total points column
-	attribute_series = df_og[attribute]
-	df_new = df_og.drop(attribute, axis=axis)
-	df_new.insert(loc=new_pos, column=attribute, value=attribute_series)
+def get_historic_stats(game_list, cutoff_date, x=10):
 
-	return df_new
-
-def get_recent_stats(game_list, todays_date, season_df, x=10):
+	season_df = get_season_stats(season_stat_url)
 
 	aggregate_list = []
 	for match in game_list:
 		for team in match:
-			team_recent_df = get_recent_team_data(team, todays_date, x=10)
+			team_recent_df = get_historic_team_data(team, cutoff_date, x=x)
 			aggregate_list.append(team_recent_df)
 
 	players_recent_df = pandas.concat(aggregate_list, axis=0)
@@ -283,7 +292,7 @@ def get_stat_series(url):
 	second_index = title[first_index + 2:].find("on")
 	last_index = first_index + second_index + 1
 	stat_cat = title[21:last_index]
-	stat_cat = convert_opp_stat(stat_cat)
+	stat_cat = teamrankings_name_to_abbreviation(stat_cat)
 
 	#just get first and second column
 	stat_data = []
@@ -294,7 +303,7 @@ def get_stat_series(url):
 		cols = row.find_all('td')
 		full_name = cols[1]['data-sort']
 		
-		abb_name = convert_team_name(full_name)
+		abb_name = convert_team_to_abbreviation(full_name)
 		team_index.append(abb_name)
 		stat_data.append((float)(cols[2].find(text=True)))
 
@@ -765,4 +774,4 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 
 	pretty_lineup = stringify_lineup(lineup)
 	print pretty_lineup
-	#uninjured_pretty = manual_drop(player_ppg, pretty_lineup)
+	uninjured_pretty = manual_drop(player_ppg, pretty_lineup, salary_df)
