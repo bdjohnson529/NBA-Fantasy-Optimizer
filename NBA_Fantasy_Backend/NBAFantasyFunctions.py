@@ -256,8 +256,6 @@ def shift_df_column(df_og, attribute, new_pos=0, axis=0):
 
 	return df_new
 
-
-
 def get_recent_stats(game_list, todays_date, season_df, x=10):
 
 	aggregate_list = []
@@ -471,9 +469,9 @@ def get_scaled_stats(season, scale, game_list):
 	return player_ppg
 
 	#gets df of players playing tonight with "Player", "POS", "PPG", "Salary" columns
-def get_ppg(stats, salary):
+def get_ppg(stats):
 	#loops through each player playing tonight
-	player_column = salary['Player']
+	player_column = stats['Player']
 
 	list = []
 
@@ -484,7 +482,6 @@ def get_ppg(stats, salary):
 		#screen out ones where it doesn't match -- sorry Lou (Louis) Williams
 		player = "unknown"
 		ppg = 0
-		ppd = 0
 
 		if not(player_series.empty):
 
@@ -515,23 +512,34 @@ def get_ppg(stats, salary):
 			#three pointers
 			threept = float(player_series["3P"])
 
-			ppg = (pts * POINT) + ((orb + drb) * REBOUND) + (ast * ASSIST) + (stl * STEAL) + (blk * BLOCK) + (tov * TOV) + (threept * THREE)
-			ppd = ppg / float(salary["Salary"][idx])
+			pts_total = (pts * POINT) + ((orb + drb) * REBOUND) + (ast * ASSIST) + (stl * STEAL) + (blk * BLOCK) + (tov * TOV) + (threept * THREE)
+
+			stats_total = [pts_total, pts, orb, drb, ast, stl, blk, tov]
+			stats_pg = [float(x)/gp for x in stats_total]
 
 			player = player_series["Player"]
 
-		row = [player, player_series["Pos"], ppg, ppd, float(salary["Salary"][idx])]
+		row = [player, player_series["Pos"]] + stats_pg
 
 		list.append(row)
 
-	df = pandas.DataFrame(list, columns=["Player", "POS", "PPG", "PPD", "Salary"])
-	df_sort = df.sort_values(by="PPD", ascending=False)
-	df_out = df_sort[df_sort["PPD"] != 0]
+	df = pandas.DataFrame(list, columns=["Player", "POS", "PPG", "PT_PG", "ORB_PG", "DRB_PG", "AST_PG", "STL_PG", "BLK_PG", "TOV_PG"])
 
-	return df_out
+	# add position to df
+	player_team = stats[["Player","Tm"]]
+	df = df.merge(player_team, left_on='Player', right_on='Player')
+
+	return df
 
 #returns a list of best lineup according to greedy algorithm)
-def greedy_knap(avail_players):
+def greedy_knap(avail_players, salary):
+
+	# calculate PPD
+	avail_players = avail_players.merge(salary, left_on='Player', right_on='Player')
+	avail_players['PPD'] = avail_players['PPG'] / avail_players["Salary"].astype(float)
+	avail_players = avail_players.sort_values(by="PPD", ascending=False)
+	avail_players = avail_players[avail_players["PPD"] != 0]
+
 	#list is position, cap, count
 	PG = ["PG", PG_cap, 0, [], 0]
 	SG = ["SG", SG_cap, 0, [], 1]
@@ -709,7 +717,7 @@ def stringify_lineup(line):
 	return stringy_line
 
 #have injured players taken out of the lineup
-def manual_drop(ppg, line):
+def manual_drop(ppg, line, salary):
 	py3 = version_info[0] > 2 #creates boolean value for test that Python major version > 2
 	injured = "y"
 
@@ -729,7 +737,7 @@ def manual_drop(ppg, line):
 
 		  	ppg = ppg[ppg["Player"] != player]
 
-		  	print stringify_lineup(greedy_knap(ppg))
+		  	print stringify_lineup(greedy_knap(ppg, salary))
 
 def drop_injured_players(game_list, dataset):
 	injured_list = get_injured_players(game_list)
@@ -751,10 +759,10 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 	if(scaling is not None):
 		player_totals = get_scaled_stats(player_dataset, scaling, game_list)
 
-	player_ppg = get_ppg(player_totals, salary_df)
+	player_ppg = get_ppg(player_totals)
 
-	lineup = greedy_knap(player_ppg)
+	lineup = greedy_knap(player_ppg, salary_df)
 
 	pretty_lineup = stringify_lineup(lineup)
 	print pretty_lineup
-	uninjured_pretty = manual_drop(player_ppg, pretty_lineup)
+	#uninjured_pretty = manual_drop(player_ppg, pretty_lineup)
