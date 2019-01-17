@@ -6,6 +6,8 @@ from pathlib2 import Path
 
 NUM_RECENT_GAMES = 10
 
+import tkinter
+
 salary_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\DKSalaries.csv"
 save_dir = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\Historic_Stats"
 recent_stats_csv = save_dir + "\\nba_recent_" + str(NUM_RECENT_GAMES) + "_games.csv"
@@ -19,7 +21,7 @@ if __name__ == "__main__":
 	'''
 
 	try:
-		myfile = open(recent_stats_csv, "r+") # or "a+", whatever you need
+		myfile = open(recent_stats_csv, "w") # or "a+", whatever you need
 	except IOError:
 		print "Could not open file! Please close Excel!"
 		exit()
