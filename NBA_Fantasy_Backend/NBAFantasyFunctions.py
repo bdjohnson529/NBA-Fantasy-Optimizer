@@ -540,18 +540,20 @@ def get_ppg(stats):
 
 	return df
 
-#returns a list of best lineup according to greedy algorithm)
-def greedy_knap(avail_players, salary):
-	print "******************\n"
-
+def get_ppd(avail_players, salary):
 	# calculate PPD
-	# avail_players = avail_players.merge(salary, left_on='Player', right_on='Player')
 	# possible that merge is not working because rows differ (there is an index missing)
-	avail_players = avail_players.merge(salary, on='Player')
-	avail_players['PPD'] = avail_players['PPG'] / avail_players["Salary"].astype(float)
-	avail_players = avail_players.sort_values(by="PPD", ascending=False)
-	avail_players = avail_players[avail_players["PPD"] != 0]
+	players_ppd = avail_players.merge(salary, on='Player')
+	players_ppd['PPD'] = players_ppd['PPG'] / players_ppd["Salary"].astype(float)
+	players_ppd = players_ppd.sort_values(by="PPD", ascending=False)
+	players_ppd = players_ppd[players_ppd["PPD"] != 0]
 
+	return players_ppd
+
+
+#returns a list of best lineup according to greedy algorithm)
+def greedy_knap(avail_players):
+	print "******************\n"
 
 	#list is position, cap, count
 	PG = ["PG", PG_cap, 0, [], 0]
@@ -565,14 +567,18 @@ def greedy_knap(avail_players, salary):
 	current_sal = 0
 
 	#first, get best players in terms of ppg
-	for i, row in avail_players.iterrows():
+	for i, row in avail_players.iterrows():		
 		for position in squad:
 			#if it matches the position
 			if (row["POS"] == position[0]):
 				#if the position isn't full
 				if (position[1] > position[2]):
+					print "currrent sal = ", current_sal
+					print row["Salary"]
+					print "cap = ", salary_cap
 					#if we can afford him
 					if (current_sal + row["Salary"] <= salary_cap):
+						print "WITHIN IF STATEMENT"
 						#add him to the list for the position
 						position[3].append(row["Player"])
 						#increase current salary
@@ -582,6 +588,10 @@ def greedy_knap(avail_players, salary):
 						#replace in squad
 						squad_pos = position[4]
 						squad[squad_pos] = position
+
+						print squad
+
+	print squad
 
 	#now, loop through again by PPD and replace lowest PPG player at a position with a player with higher PPG
 	#while staying under salary cap
@@ -628,14 +638,26 @@ def greedy_knap(avail_players, salary):
 					player_ppg = player_row["PPG"]
 					other_player = player_row
 
+
+				print player_ppg
+				print player_sal
+
 				#if the player's ppg is higher than the lowest at their position
 				player_ppg = player_ppg.values[0]
 				player_sal = player_sal.values[0]
 				player = player.values[0]
 
+				print player_ppg
+				print player_sal
+				print player
+
 				#if it isn't a duplicate
 				if (other_player["Player"].values[0] != row["Player"]):
 					if (row["PPG"] > player_ppg):
+
+						print "NEW PPG = ", row["PPG"]
+						print "OLD PPG = ", player_ppg
+
 						#if we can afford him
 						if (row["Salary"] + current_sal - player_sal <= salary_cap):
 							#replace the player in the squad
@@ -750,7 +772,7 @@ def manual_drop(ppg, line, salary):
 
 		  	ppg = ppg[ppg["Player"] != player]
 
-		  	print stringify_lineup(greedy_knap(ppg, salary))
+		  	print stringify_lineup(greedy_knap(ppg))
 
 def drop_injured_players(game_list, dataset):
 	injured_list = get_injured_players(game_list)
@@ -773,11 +795,14 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 		player_totals = get_scaled_stats(player_dataset, scaling, game_list)
 
 	player_ppg = get_ppg(player_totals)
+	player_ppd = get_ppd(player_ppg, salary_df)
+	player_ppd = player_ppd.sort_values(by=['PPD'], ascending=True)
+	player_ppd.to_csv("player_ppd.csv")
 
-	print player_ppg
+	print player_ppd
 
-	lineup = greedy_knap(player_ppg, salary_df)
+	lineup = greedy_knap(player_ppd)
 
 	pretty_lineup = stringify_lineup(lineup)
 	print pretty_lineup
-	uninjured_pretty = manual_drop(player_ppg, pretty_lineup, salary_df)
+	uninjured_pretty = manual_drop(player_ppd, pretty_lineup, salary_df)

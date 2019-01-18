@@ -183,14 +183,13 @@ class App():
 		# Create a frame for each of the different widgets in the GUI
 		# We use the grid method to group the frames
 		imagesFrame = tkinter.Frame(self.window)
-		imagesFrame.pack(anchor="w", fill="y", expand=False, side="left")
+		imagesFrame.pack(side="left")
 
 		actionsFrame = tkinter.Frame(self.window)
-		actionsFrame.pack(anchor="w", fill="y", expand=False, side="left")
+		actionsFrame.pack(side="left")
 
 
-		#
-		# Now fill up the 
+		# Now fill up the action frame
 		tkinter.Button(actionsFrame, text="Lineup from Season", width = 50, height=4, font=helv36,
 			command= self.create_lineup_from_season).grid(row=0, column=0, sticky="n")
 		tkinter.Button(actionsFrame, text="Lineup from Recent Data", width = 50, height=4, font=helv36,
@@ -219,31 +218,14 @@ class App():
 			row = int(i / 2)
 			col = i % 2
 
-			print row
-			print col
-
-
 			buttonWithLogo = tkinter.Button(imagesFrame, width=sampleWidth, height=sampleHeight,
 				command= lambda i=i: self.update_selected_games(i))
-			#buttonWithLogo.pack(side="left", fill="x", expand=True)
-			buttonWithLogo.grid(row=i/2, column=2, sticky="n")
 
 			# self.buttonLogo = buttonWithLogo
-			buttonLogo = buttonAttrList[i]
-			setattr(self, buttonLogo, buttonWithLogo)
-
-			#newCanvas = tkinter.Canvas(imagesFrame, width=width, height=height)
-			#newCanvas.pack(side="left", fill="both", expand=True)
-
-#			if(i%2 == 0):
-#				tkinter.Button(imagesFrame, text="Select", width = 20, height=4, font=helv36,
-#					command= lambda i=row: self.update_selected_games(i)).grid(row=i/2, column=2, sticky="n")
-
+			buttonAttr = buttonAttrList[i]
+			setattr(self, buttonAttr, buttonWithLogo)
 
 		team_list = [x for innerlist in game_list for x in innerlist]
-
-		print game_list
-		print team_list
 
 		for i in range(0, len(team_list)):
 
@@ -256,13 +238,6 @@ class App():
 			buttonLogo = getattr(self, buttonAttrList[i])
 			buttonLogo.config(image=self.formatted_img_list[team_number], width=sampleWidth, height=sampleHeight)
 			buttonLogo.grid(row=row, column=col)
-
-
-			# used for canvases
-#			canvasHome = getattr(self, canvasTeamList[home_idx])
-#			canvasHome.create_image(0, 0, image=self.formatted_img_list[home_number], anchor=tkinter.NW)
-#			canvasAway = getattr(self, canvasTeamList[away_idx])
-#			canvasAway.create_image(0,0, image=self.formatted_img_list[away_number], anchor=tkinter.NW)
 
 	def execute(self):
 		# Set up the GUI

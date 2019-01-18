@@ -13,3 +13,8 @@ python NBAFantasyStats.py
 * [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/#Download)
 
 Shoutout to Kristaps Porzingis for being the algorithm MVP
+
+
+##### Future development:
+Move GenerateHistoricStats function to GUI. User can specify save paths.
+Add GUI option to scale based on opponents.
