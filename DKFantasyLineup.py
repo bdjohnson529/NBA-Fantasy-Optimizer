@@ -2,17 +2,26 @@
 #Author: Owen Auch, Ben Johnson
 
 from NBA_Fantasy_Backend.NBAFantasyFunctions import *
+from NBA_Fantasy_Backend.GUI_DKFantasyLineup import *
 from pathlib2 import Path
 
 NUM_RECENT_GAMES = 10
 
-import tkinter
+from tkinter import Tk, Label, Button
+import logging
 
 salary_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\DKSalaries.csv"
+img_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\img\\logos\\"
+
 save_dir = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\Historic_Stats"
 recent_stats_csv = save_dir + "\\nba_recent_" + str(NUM_RECENT_GAMES) + "_games.csv"
 
 if __name__ == "__main__":
+
+	# configure logging
+	logging.basicConfig()
+	logging.getLogger().setLevel(logging.DEBUG)
+	logging.debug("Program starting.")
 
 	print "\n\n\n\n@@@@@@@@@@@@@@@@@@ Let's Analyze NBA Data @@@@@@@@@@@@@@@@@@@@@"
 
@@ -42,6 +51,10 @@ if __name__ == "__main__":
 	print "Games played today, ", str(todays_date), " include..."
 	print game_list
 	print "\n\n"
+
+	selection_gui = SelectTeamsWindow(tkinter.Tk(), game_list, img_path)
+	selection_gui.execute()
+
 
 	# call method to get recent stats for teams playing tonight
 	opp_scaling_df = get_opp_scaling()
