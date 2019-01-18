@@ -542,12 +542,16 @@ def get_ppg(stats):
 
 #returns a list of best lineup according to greedy algorithm)
 def greedy_knap(avail_players, salary):
+	print "******************\n"
 
 	# calculate PPD
-	avail_players = avail_players.merge(salary, left_on='Player', right_on='Player')
+	# avail_players = avail_players.merge(salary, left_on='Player', right_on='Player')
+	# possible that merge is not working because rows differ (there is an index missing)
+	avail_players = avail_players.merge(salary, on='Player')
 	avail_players['PPD'] = avail_players['PPG'] / avail_players["Salary"].astype(float)
 	avail_players = avail_players.sort_values(by="PPD", ascending=False)
 	avail_players = avail_players[avail_players["PPD"] != 0]
+
 
 	#list is position, cap, count
 	PG = ["PG", PG_cap, 0, [], 0]
@@ -769,6 +773,8 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 		player_totals = get_scaled_stats(player_dataset, scaling, game_list)
 
 	player_ppg = get_ppg(player_totals)
+
+	print player_ppg
 
 	lineup = greedy_knap(player_ppg, salary_df)
 

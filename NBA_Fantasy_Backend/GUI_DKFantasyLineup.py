@@ -44,6 +44,8 @@ class SelectTeamsWindow():
 		self.game_list 			= game_list
 		self.img_path			= img_path
 
+		print "END OF INIT"
+
 
 
 	def greet(self):
@@ -108,15 +110,18 @@ class SelectTeamsWindow():
 		team1.create_image(0, 0, image=self.homeImg, anchor=tkinter.NW)		
 		team2.create_image(0,0, image=self.awayImg, anchor=tkinter.NW)
 
-
 		# Set up the RGB and Masked Canvases to expect images half the size of the full image
 		self.team = tkinter.Canvas(imagesFrame, width=width/2, height=height/2)
 		self.rgbCanvas.pack(side="left", fill="both", expand=True)
 		self.maskedCanvas = tkinter.Canvas(imagesFrame, width=width/2, height=height/2)
 		self.maskedCanvas.pack(side="right", fill="both", expand=True)
 
+		print "END OF FUNCTION"
+
 	def execute(self):
 		logging.debug("SelectTeamsWindow exec()")
 
 		# Set up the GUI
 		self.createWidgets(self.game_list)
+
+		return False

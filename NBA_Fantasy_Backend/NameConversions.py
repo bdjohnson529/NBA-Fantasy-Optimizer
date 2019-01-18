@@ -144,3 +144,39 @@ def convert_team_to_abbreviation(full_name):
 		abb = "WAS"
 
 	return abb
+
+def get_abbreviation_list():
+
+	abb_list = ["TOR",
+	"ATL",
+	"BRK",
+	"BOS",
+	"CHO",
+	"CHI",
+	"CLE",
+	"DAL",
+	"DEN",
+	"DET",
+	"GSW",
+	"HOU",
+	"IND",
+	"LAL",
+	"LAC",
+	"MEM",
+	"MIA",
+	"MIL",
+	"MIN",
+	"NOP",
+	"NYK",
+	"OKC",
+	"ORL",
+	"PHI",
+	"PHO",
+	"POR",
+	"SAC",
+	"SAS",
+	"TOR",
+	"UTA",
+	"WAS"]
+
+	return abb_list
