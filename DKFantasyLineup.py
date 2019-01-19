@@ -7,18 +7,19 @@ from pathlib2 import Path
 from copy import deepcopy
 import cv2
 import PIL.Image, PIL.ImageTk
-import tkinter
-from tkinter import Tk, Label, Button, font, Scrollbar
+import Tkinter as tkinter
+from Tkinter import Tk, Label, Button, Scrollbar
+import tkFont as font
 
 import logging
 
 NUM_RECENT_GAMES = 10
 
-salary_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\DKSalaries.csv"
-img_path = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\img\\logos\\"
+salary_path = "/home/ben/NBA-Fantasy-Optimizer/DKSalaries.csv"
+img_path = "/home/ben/NBA-Fantasy-Optimizer/img/logos/"
 
-save_dir = "C:\\Users\\OKSI\\Documents\\NBA-Fantasy-Optimizer\\Historic_Stats"
-recent_stats_csv = save_dir + "\\nba_recent_" + str(NUM_RECENT_GAMES) + "_games.csv"
+save_dir = "/home/ben/NBA-Fantasy-Optimizer/historic_stats"
+recent_stats_csv = save_dir + "/nba_recent_" + str(NUM_RECENT_GAMES) + "_games.csv"
 
 
 class App():
