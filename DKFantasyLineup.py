@@ -44,27 +44,8 @@ class App():
 
 		self.imagesFrame 		= None
 
-		# references to image canvases
-		self.canvasTeam01		= None
-		self.canvasTeam02		= None
-		self.canvasTeam03		= None
-		self.canvasTeam04		= None
-		self.canvasTeam05		= None
-		self.canvasTeam06		= None
-		self.canvasTeam07		= None
-		self.canvasTeam08		= None
-		self.canvasTeam09		= None
-		self.canvasTeam10		= None
-		self.canvasTeam11		= None
-		self.canvasTeam12		= None
-		self.canvasTeam13		= None
-		self.canvasTeam14		= None
-		self.canvasTeam15		= None
-		self.canvasTeam16		= None
-		self.canvasTeam17		= None
-		self.canvasTeam18		= None
-		self.canvasTeam19		= None
-		self.canvasTeam20		= None
+		# buttons with team logos
+		self.teamButtonList		= []
 
 		self.recentMatchPanel	= None
 		self.salaryPathPanel	= None
@@ -250,9 +231,10 @@ class App():
 		sampleImg = cv2.imread(self.img_path + "cho" + ".png")
 		sampleHeight, sampleWidth, no_channels = sampleImg.shape
 
-		# Set up the match canvases
-		buttonAttrList = [x for x in dir(self) if 'canvasTeam' in x]
-		for i in range(0, len(buttonAttrList)):
+		team_list = [x for innerlist in game_list for x in innerlist]
+
+		# Set up the buttons with team logos
+		for i in range(0, len(team_list)):
 
 			# grid the logos
 			row = int(i / 2)
@@ -261,13 +243,7 @@ class App():
 			buttonWithLogo = tkinter.Button(imagesFrame, width=sampleWidth, height=sampleHeight,
 				command= lambda i=i: self.update_selected_games(i))
 
-			# self.buttonLogo = buttonWithLogo
-			buttonAttr = buttonAttrList[i]
-			setattr(self, buttonAttr, buttonWithLogo)
-
-		team_list = [x for innerlist in game_list for x in innerlist]
-
-		for i in range(0, len(team_list)):
+			self.teamButtonList.append(buttonWithLogo)
 
 			team = team_list[i]
 			team_number = self.abbv_list.index(team)
@@ -275,9 +251,8 @@ class App():
 			row = i/2
 			col = i%2
 
-			buttonLogo = getattr(self, buttonAttrList[i])
-			buttonLogo.config(image=self.formatted_img_list[team_number], width=sampleWidth, height=sampleHeight)
-			buttonLogo.grid(row=row, column=col)
+			self.teamButtonList[i].config(image=self.formatted_img_list[team_number], width=sampleWidth, height=sampleHeight)
+			self.teamButtonList[i].grid(row=row, column=col)
 
 	def execute(self):
 		# Set up the GUI
