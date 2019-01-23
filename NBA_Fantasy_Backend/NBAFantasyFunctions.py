@@ -799,10 +799,22 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 	player_ppd = player_ppd.sort_values(by=['PPD'], ascending=True)
 	player_ppd.to_csv("player_ppd.csv")
 
-	print player_ppd
-
 	lineup = greedy_knap(player_ppd)
 
-	pretty_lineup = stringify_lineup(lineup)
-	print pretty_lineup
-	uninjured_pretty = manual_drop(player_ppd, pretty_lineup, salary_df)
+	playerstats = []
+	for position in lineup:
+		players = position[1]
+		for player in players:
+			playerstats.append( player_ppd.loc[player_ppd['Player'] == player] )
+			print "PLAYER == ", player
+			print playerstats
+
+	lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)
+	
+	#print player_ppd.head()
+
+	return lineup_df
+
+#	pretty_lineup = stringify_lineup(lineup)
+#	print pretty_lineup
+#	uninjured_pretty = manual_drop(player_ppd, pretty_lineup, salary_df)
