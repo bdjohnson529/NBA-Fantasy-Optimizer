@@ -780,18 +780,89 @@ def dk_knapsack(avail_players, squad):
 		candidates = candidates.reset_index(drop=True)
 
 		for i, row in candidates.iterrows():
-			player = row['Player']
-			salary = float(row['Salary'])
+			player 	= row['Player']
+			salary 	= float(row['Salary'])
+			fppg 	= float(row['Fppg'])
 
 			used_players = [x[1] for x in squad]
 			if (player not in used_players) and (current_sal + salary < salary_cap):
 
 				position[1] = player
+				position[2] = fppg
+				position[3] = salary
+
 				current_sal = current_sal + salary
+
 				break
 
+	# convert squad to dict
+	squad_dict = {}
+	for pos_player in squad:
+		squad_dict[pos_player[0]] = pos_player[1:4]
 
-	return squad
+	# now fill up the sack
+	avail_players = avail_players.sort_values(by=['Fppg'], ascending=False)
+	for i, row in avail_players.iterrows():
+
+		# total salary
+		total_salary = 0
+		player_list = []
+
+		for key, value in squad_dict.iteritems():
+			total_salary = total_salary + value[2]
+			player_list.append(value[0])
+
+		extra_salary = salary_cap - total_salary
+
+		player 		= row['Player']
+		fppg 		= row['Fppg']
+		salary 		= row['Salary']
+
+		SG 		= row['SG']
+		PG 		= row['PG']
+		G  		= row['G']
+		SF 		= row['SF']
+		PF 		= row['PF']
+		F  		= row['F']
+		C  		= row['C']
+		UTIL 	= row['UTIL']
+
+		if(SG):
+			if (fppg > squad_dict['SG'][1]) and (salary < squad_dict['SG'][2] + extra_salary) and (player not in player_list):
+				squad_dict['SG'] = [player, fppg, salary]
+				continue
+		if(PG):
+			if (fppg > squad_dict['PG'][1]) and (salary < squad_dict['PG'][2] + extra_salary) and (player not in player_list):
+				squad_dict['PG'] = [player, fppg, salary]
+				continue
+
+		if(G):
+			if (fppg > squad_dict['G'][1]) and (salary < squad_dict['G'][2] + extra_salary) and (player not in player_list):
+				squad_dict['G'] = [player, fppg, salary]
+				continue
+		if(SF):
+			if (fppg > squad_dict['SF'][1]) and (salary < squad_dict['SF'][2] + extra_salary) and (player not in player_list):
+				squad_dict['SF'] = [player, fppg, salary]
+				continue
+		if(PF):
+			if (fppg > squad_dict['PF'][1]) and (salary < squad_dict['PF'][2] + extra_salary) and (player not in player_list):
+				squad_dict['PF'] = [player, fppg, salary]
+				continue
+		if(F):
+			if (fppg > squad_dict['F'][1]) and (salary < squad_dict['F'][2] + extra_salary) and (player not in player_list):
+				squad_dict['F'] = [player, fppg, salary]
+				continue
+		if(C):
+			if (fppg > squad_dict['C'][1]) and (salary < squad_dict['C'][2] + extra_salary) and (player not in player_list):
+				squad_dict['C'] = [player, fppg, salary]
+				continue
+		if(UTIL):
+			if (fppg > squad_dict['UTIL'][1]) and (salary < squad_dict['UTIL'][2] + extra_salary) and (player not in player_list):
+				squad_dict['UTIL'] = [player, fppg, salary]
+				continue
+
+
+	return squad_dict
 
 def stringify_lineup(line):
 	go_2 = range(2)
@@ -893,7 +964,8 @@ def create_dk_lineup(dk_dataset):
 	dk_dataset.to_csv("dk_ppd.csv", sep=",")
 
 
-	squad = [['SF', None], ['UTIL', None], ['F', None], ['PG', None], ['G', None], ['C', None], ['SG', None], ['PF', None]]
+	squad = [['SF', None, None, None], ['UTIL', None, None, None, None], ['F', None, None, None], ['PG', None, None, None],
+		['G', None, None, None], ['C', None, None, None], ['SG', None, None, None], ['PF', None, None, None]]
 
 	#squad_list = [squad]
 	squad_list = list(itertools.permutations(squad))
@@ -906,7 +978,7 @@ def create_dk_lineup(dk_dataset):
 
 	# we use a random permutation of the squad selection order to find the maximum fpp/team
 	numPermutations = 300
-	if(True):
+	if(False):
 		squad_list = []
 		for i in range(0,numPermutations):
 			newSquad = deepcopy(squad)
@@ -917,10 +989,10 @@ def create_dk_lineup(dk_dataset):
 			lineup = dk_knapsack(dk_dataset, squad)#
 
 			playerstats = []
-			for position in lineup:
-				player = position[1]
+			for key, value in lineup.iteritems():
+				player = value[0]
 				stats = dk_dataset.loc[dk_dataset['Player'] == player]
-				stats['POS'] = position[0]
+				stats['POS'] = key
 				playerstats.append(stats)
 
 			lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)
@@ -931,6 +1003,8 @@ def create_dk_lineup(dk_dataset):
 				maxFPPG = sum_fppg
 				print "max fppg: ", maxFPPG, " salary = ", salary
 
+	maxFPPG = 264
+
 	print "Building squad list"
 	for squad in squad_list:
 		# now find 24 highest fppg squads
@@ -940,10 +1014,10 @@ def create_dk_lineup(dk_dataset):
 		lineup = dk_knapsack(dk_dataset, squad)
 
 		playerstats = []
-		for position in lineup:
-			player = position[1]
+		for key, value in lineup.iteritems():
+			player = value[0]
 			stats = dk_dataset.loc[dk_dataset['Player'] == player]
-			stats['POS'] = position[0]
+			stats['POS'] = key
 			playerstats.append(stats)
 
 		lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)

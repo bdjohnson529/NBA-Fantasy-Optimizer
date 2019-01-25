@@ -23,6 +23,12 @@ def teamrankings_name_to_abbreviation(stat_name):
 
 	return abb_name
 
+def player_name_conversion(playerName):
+	if(playerName == "Danuel House Jr."):
+		return "Danuel House"
+	else:
+		return playerName
+
 def get_yesterdays_url():
 	todays_date = str(date.today())
 

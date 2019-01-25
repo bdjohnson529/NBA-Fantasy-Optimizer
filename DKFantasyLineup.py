@@ -247,10 +247,14 @@ class App():
 				fppgLabel.grid(row=rowNum, column=2)
 
 				rec_fppg = group.loc[i, 'recFppg']
+				if(rec_fppg is not None):
+					rec_fppg = round(rec_fppg, 2)
 				recFppgLabel = Label(frame, text=rec_fppg)
 				recFppgLabel.grid(row=rowNum, column=3)
 
 				rec_var  = group.loc[i, 'varFppg']
+				if(rec_fppg is not None):
+					rec_var = round(rec_var, 2)
 				recVarLabel = Label(frame, text=rec_var)
 				recVarLabel.grid(row=rowNum, column=4)
 
@@ -547,7 +551,17 @@ class App():
 
 			for index, row in lineup.iterrows():
 				playerName = row['Player']
+				# some players are named differently between DK and Basketball Reference
+				playerName = player_name_conversion(playerName)
+
+				print "************"
+				print playerName
+
 				playerStats = self.playersRecentData[self.playersRecentData["Player"] == playerName]
+
+				# dataframe could be empty if player recently changed teams
+				if(playerStats.empty):
+					continue
 
 				recFppg = playerStats['mean_fp'].values[0]
 				recVar = playerStats['var_fp'].values[0]
