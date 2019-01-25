@@ -10,6 +10,7 @@ from PandasFunctions import *
 import random
 from copy import deepcopy
 import itertools
+import math
 
 from sys import version_info
 from datetime import date
@@ -177,6 +178,9 @@ def get_box_scores(box_url, team):
 	return box_df
 
 def get_historic_team_data(team, cutoff_date, x=10):
+	pass
+
+def get_team_summary(team, cutoff_date, x=10):
 
 	yesterdays_url = get_yesterdays_url()
 	cutoff_url = create_date_url(cutoff_date)
@@ -229,6 +233,7 @@ def get_historic_team_data(team, cutoff_date, x=10):
 	recent_urls = date_url_list[j:j+x]
 
 	box_list = []
+	player_list = []
 	for entry in recent_urls:
 		url = entry[1]
 		full_url = "https://www.basketball-reference.com" + url
@@ -236,34 +241,63 @@ def get_historic_team_data(team, cutoff_date, x=10):
 		box_df = get_box_scores(full_url, team)
 		box_list.append(box_df)
 
-	box_df = pandas.concat(box_list, axis=0, ignore_index=True)
+		date = url[11:-9]
 
-	# count number of games played
-	count_df = box_df.groupby('Player').count()
-	count_df = count_df[["MP"]]
-	count_df = count_df.rename(columns={"MP":"G"}).reset_index(drop=True)
+		box_df['Date'] = date
 
-	# add games played
-	team_recent_df = box_df.groupby('Player').sum().reset_index()
-	team_recent_df["G"] = count_df
+		players = box_df['Player'].tolist()
+		player_list = player_list + players
 
-	# add team
-	team_recent_df['Tm'] = team
+	player_list = list(set(player_list))
 
-	team_recent_df = shift_df_column(team_recent_df, "PTS", new_pos=2, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "ORB", new_pos=3, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "DRB", new_pos=4, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "AST", new_pos=5, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "STL", new_pos=6, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "BLK", new_pos=7, axis=1)
-	team_recent_df = shift_df_column(team_recent_df, "TOV", new_pos=8, axis=1)
+	player_summary_list = []
+	for player in player_list:
+		player_list = []
 
-	team_recent_df = team_recent_df.sort_values(by=['MP'], ascending=False)
+		for score_df in box_list:
+			gameScore = score_df.loc[score_df['Player'] == player]
+			player_list.append(gameScore)
 
-	print team_recent_df
-	print "****************************************"
+		player_df = pandas.concat(player_list, axis=0, ignore_index=True)
+		player_df = player_df.reset_index(drop=True)
 
-	return team_recent_df
+		gp = len(player_df.index)
+
+		mean_pts = player_df['PTS'].mean()
+		mean_orb = player_df['ORB'].mean()
+		mean_drb = player_df['DRB'].mean()
+		mean_ast = player_df['AST'].mean()
+		mean_stl = player_df['STL'].mean()
+		mean_blk = player_df['BLK'].mean()
+		mean_tov = player_df['TOV'].mean()
+		mean_3p  = player_df['3P'].mean()
+
+		mean_fp = (mean_pts * POINT) + ((mean_orb + mean_drb) * REBOUND) + (mean_ast * ASSIST) + (mean_stl * STEAL) + (mean_blk * BLOCK) + (mean_tov * TOV) + (mean_3p * THREE)
+
+		var_pts = player_df['PTS'].var()
+		var_orb = player_df['ORB'].var()
+		var_drb = player_df['DRB'].var()
+		var_ast = player_df['AST'].var()
+		var_stl = player_df['STL'].var()
+		var_blk = player_df['BLK'].var()
+		var_tov = player_df['TOV'].var()
+		var_3p  = player_df['3P'].var()
+
+		var_fp = (var_pts * math.pow(POINT,2) ) + ((var_orb + var_drb) * math.pow(REBOUND,2) ) + (var_ast * math.pow(ASSIST,2) ) + (var_stl * math.pow(STEAL,2) ) + (var_blk * math.pow(BLOCK,2) ) + (var_tov * math.pow(TOV,2) ) + (var_3p * math.pow(THREE,2) )
+
+		d = {'Player': [player], 'mean_fp': [mean_fp], 'var_fp': [var_fp]}
+		player_summary = pandas.DataFrame(data=d)
+
+		player_summary_list.append(player_summary)
+
+	team_summary = pandas.concat(player_summary_list, axis=0, ignore_index=True)
+	team_summary = team_summary.sort_values(by="mean_fp", ascending=False)
+
+
+	print team_summary
+	print "******************"
+
+	return team_summary
 
 def get_historic_stats(game_list, cutoff_date, x=10):
 
@@ -272,7 +306,8 @@ def get_historic_stats(game_list, cutoff_date, x=10):
 	aggregate_list = []
 	for match in game_list:
 		for team in match:
-			team_recent_df = get_historic_team_data(team, cutoff_date, x=x)
+			#team_recent_df = get_historic_team_data(team, cutoff_date, x=x)
+			team_recent_df = get_team_summary(team, cutoff_date, x=x)
 			aggregate_list.append(team_recent_df)
 
 	players_recent_df = pandas.concat(aggregate_list, axis=0)
@@ -583,7 +618,6 @@ def greedy_knap(avail_players):
 					print "cap = ", salary_cap
 					#if we can afford him
 					if (current_sal + row["Salary"] <= salary_cap):
-						print "WITHIN IF STATEMENT"
 						#add him to the list for the position
 						position[3].append(row["Player"])
 						#increase current salary
@@ -870,14 +904,16 @@ def create_dk_lineup(dk_dataset):
 	i = 0
 	maxFPPG = 0
 
-	if(False):
-		# search squad list for max fppg
-		for squad in squad_list:
-			# number of lineups to search
-			i = i+1
-			if(i>2000):
-				break#
+	# we use a random permutation of the squad selection order to find the maximum fpp/team
+	numPermutations = 300
+	if(True):
+		squad_list = []
+		for i in range(0,numPermutations):
+			newSquad = deepcopy(squad)
+			random.shuffle(newSquad)
+			squad_list.append(newSquad)
 
+		for squad in squad_list:
 			lineup = dk_knapsack(dk_dataset, squad)#
 
 			playerstats = []
@@ -885,17 +921,15 @@ def create_dk_lineup(dk_dataset):
 				player = position[1]
 				stats = dk_dataset.loc[dk_dataset['Player'] == player]
 				stats['POS'] = position[0]
-				playerstats.append(stats)#
+				playerstats.append(stats)
 
 			lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)
-			sum_fppg = round(lineup_df["Fppg"].sum(), 2)#
+			sum_fppg = round(lineup_df["Fppg"].sum(), 2)
 			salary = float(lineup_df["Salary"].sum())
 
 			if(sum_fppg > maxFPPG) and (salary < salary_cap):
 				maxFPPG = sum_fppg
 				print "max fppg: ", maxFPPG, " salary = ", salary
-
-	maxFPPG = 301
 
 	print "Building squad list"
 	for squad in squad_list:

@@ -67,6 +67,7 @@ class App():
 		self.game_list 			= game_list
 		self.selected_game_list = deepcopy(game_list)
 		self.injury_list 		= None
+		self.playersRecentData  = None
 
 		self.img_path			= img_path
 		self.salary_path 		= salary_path
@@ -151,8 +152,6 @@ class App():
 		actionsFrame.rowconfigure(5, minsize=30)
 		setattr(self, 'injuryListPanel', injuryListPanel)
 
-		tkinter.Button(actionsFrame, text="Get Injured Players", width = 20, height=1,
-			command= self.get_injury_list).grid(row=5, column=1, sticky="w")
 
 		#tkinter.Canvas(actionsFrame, width=20, height=100).grid(row=4, column=0, sticky="w")
 		tkinter.Label(actionsFrame, text="Number of recent matches to use:").grid(row=6, column=0, sticky="w")
@@ -165,15 +164,31 @@ class App():
 		tkinter.Button(actionsFrame, text="Update settings", width = 20, height=1,
 			command= self.update_settings).grid(row=7, column=1, sticky="w")
 
-		tkinter.Canvas(actionsFrame, width=7, height=100).grid(row=8, column=0, sticky="w")
+		tkinter.Canvas(actionsFrame, width=7, height=50).grid(row=8, column=0, sticky="w")
+
+		configureFrame = tkinter.Frame(actionsFrame)
+		configureFrame.grid(row=9, column=0, sticky='ns')
+
+		tkinter.Button(configureFrame, text="Load Injury List from File", width = 35, height=1,
+			command= self.get_injury_list).grid(row=0, column=1, sticky="w")
+		tkinter.Button(configureFrame, text="Get Injury List from Internet", width = 35, height=1,
+			command= self.save_injury_list).grid(row=0, column=0, sticky="w")
+		tkinter.Button(configureFrame, text="Save Injury List to File", width = 35, height=1,
+			command= self.save_injury_list).grid(row=0, column=2, sticky="w")
+		tkinter.Button(configureFrame, text="Get Recent Player Performance from Internet", width = 35, height=1,
+			command= self.calculate_player_performance).grid(row=1, column=0, sticky="w")
+		tkinter.Button(configureFrame, text="Save Recent Player Stats to File", width = 35, height=1,
+			command= self.save_player_performance).grid(row=1, column=2, sticky="w")
+		tkinter.Button(configureFrame, text="Load Recent Player Stats from File", width = 35, height=1,
+			command= self.load_player_performance).grid(row=1, column=1, sticky="w")		
+
+		tkinter.Canvas(actionsFrame, width=7, height=50).grid(row=10, column=0, sticky="w")
 
 		lineupButtonFrame = tkinter.Frame(actionsFrame)
-		lineupButtonFrame.grid(row=9, column=0, sticky='ns')
+		lineupButtonFrame.grid(row=11, column=0, sticky='ns')
 
 		tkinter.Button(lineupButtonFrame, text="Lineup from Season", width = 50, height=4, font=helv36,
 			command= lambda i=0: self.LineupPage(i)).grid(row=1, column=0, sticky="w")
-		tkinter.Button(lineupButtonFrame, text="Lineup from Recent Data", width = 50, height=4, font=helv36,
-			command= lambda i=1: self.LineupPage(i)).grid(row=2, column=0, sticky="w")
 		tkinter.Button(lineupButtonFrame, text="Lineup from DraftKings Data", width = 50, height=4, font=helv36,
 			command= self.DKLineupPage).grid(row=3, column=0, sticky="w")
 
@@ -193,11 +208,17 @@ class App():
 		fppgLabel = Label(frame, text="FPPG")
 		fppgLabel.grid(row=0, column=2)
 
+		fppgLabel = Label(frame, text="Recent FPPG")
+		fppgLabel.grid(row=0, column=3)
+
+		fppgLabel = Label(frame, text="Variance FPPG")
+		fppgLabel.grid(row=0, column=4)
+
 		teamLabel = Label(frame, text="Team")
-		teamLabel.grid(row=0, column=3)
+		teamLabel.grid(row=0, column=5)
 
 		salaryLabel = Label(frame, text="Salary")
-		salaryLabel.grid(row=0, column=4)
+		salaryLabel.grid(row=0, column=6)
 
 		####
 		## data
@@ -225,15 +246,28 @@ class App():
 				fppgLabel = Label(frame, text=fppg)
 				fppgLabel.grid(row=rowNum, column=2)
 
+				rec_fppg = group.loc[i, 'recFppg']
+				recFppgLabel = Label(frame, text=rec_fppg)
+				recFppgLabel.grid(row=rowNum, column=3)
+
+				rec_var  = group.loc[i, 'varFppg']
+				recVarLabel = Label(frame, text=rec_var)
+				recVarLabel.grid(row=rowNum, column=4)
+
 				team = group.loc[i, "Tm"]
 				teamLabel = Label(frame, text=team)
-				teamLabel.grid(row=rowNum, column=3)
+				teamLabel.grid(row=rowNum, column=5)
 
 				salary = group.loc[i, "Salary"]
 				salaryLabel = Label(frame, text=salary)
-				salaryLabel.grid(row=rowNum, column=4)
+				salaryLabel.grid(row=rowNum, column=6)
 
 		sum_fppg = round(lineup_df["Fppg"].sum(), 2)
+		sum_recfppg = round(lineup_df["recFppg"].sum(), 2)
+
+		sum_varfppg = round(lineup_df["varFppg"].sum(), 2)
+		std_dev		= math.sqrt(sum_varfppg)
+
 		sum_salary = lineup_df["Salary"].sum()
 
 		rowNum = rowNum + 2
@@ -241,9 +275,14 @@ class App():
 		sumFPPGLabel = Label(frame, text=sum_fppg)
 		sumFPPGLabel.grid(row=rowNum, column=2)
 
-		sumSalaryLabel = Label(frame, text=sum_salary)
-		sumSalaryLabel.grid(row=rowNum, column=4)
+		sumRecFPPGLabel = Label(frame, text=sum_recfppg)
+		sumRecFPPGLabel.grid(row=rowNum, column=3)
 
+		varLabel = Label(frame, text=sum_varfppg)
+		varLabel.grid(row=rowNum, column=4)
+
+		sumSalaryLabel = Label(frame, text=sum_salary)
+		sumSalaryLabel.grid(row=rowNum, column=6)
 
 
 	def DKLineupPage(self):
@@ -261,12 +300,35 @@ class App():
 		i = 0
 		for lineup_df in lineup_df_list:
 			lineupFrame = tkinter.Frame(self.bodyFrame)
-			lineupFrame.grid(row=i/6, column=i%6, sticky='ns')
+			lineupFrame.grid(row=i/5, column=i%5, sticky='ns')
 
 			self.DrawLineupTable(lineupFrame, lineup_df)
 
 			i = i+1
 
+	def calculate_player_performance(self):
+		players_recent_summary = get_historic_stats(self.selected_game_list, todays_date, x=self.num_recent_games)
+
+		print players_recent_summary
+
+		saveFile = save_dir + "/recent_performance.csv"
+		players_recent_summary.to_csv(saveFile, ",")
+
+		self.playersRecentData = players_recent_summary
+
+
+	def save_player_performance(self):
+		saveFile = save_dir + "/recent_performance.csv"
+		self.playersRecentData.to_csv(saveFile, ",")
+
+
+	def load_player_performance(self):
+		saveFile = save_dir + "/recent_performance.csv"
+		players_recent_summary = pandas.read_csv(saveFile)
+
+		print players_recent_summary
+
+		self.playersRecentData = players_recent_summary
 
 
 	def LineupPage(self, option):
@@ -384,10 +446,14 @@ class App():
 			self.salary_path = salaryPathString
 
 	def get_injury_list(self):
-		injuryListFile = self.injuryListPanel.get()
+		injuryFile = self.injuryListPanel.get()
+
+		if not self.check_files(injuryFile):
+			print "No injury list found."
+			return
 
 		injury_list = []
-		with open(injured_file, 'r') as f:
+		with open(injuryFile, 'r') as f:
 
 			players = f.readlines()
 			for player in players:
@@ -396,6 +462,17 @@ class App():
 		self.injury_list = injury_list
 
 		print "Injured players = ", injury_list
+
+	def save_injury_list(self):
+		print "Retrieving injury list from the internet."
+
+		self.injury_list = get_injured_players(self.selected_game_list)
+
+		with open(injured_file, 'w') as f:
+			for player in self.injury_list:
+				f.write(player + "\n")
+
+		print "Injury list saved to file."
 
 
 	def check_files(self, salaryFilePath):
@@ -406,7 +483,6 @@ class App():
 			return True
 
 	def create_lineup_from_dk(self):
-
 
 		if not self.check_files(self.salary_file):
 			print "No salary file found. Please download salary CSV from DraftKings"
@@ -463,8 +539,21 @@ class App():
 
 		#opp_scaling_df = self.get_scaling()
 		salary_df = self.get_salary()
-
 		lineup_df_list = create_dk_lineup(dk_df)
+
+		for lineup in lineup_df_list:
+			lineup['recFppg'] = None
+			lineup['varFppg'] = None
+
+			for index, row in lineup.iterrows():
+				playerName = row['Player']
+				playerStats = self.playersRecentData[self.playersRecentData["Player"] == playerName]
+
+				recFppg = playerStats['mean_fp'].values[0]
+				recVar = playerStats['var_fp'].values[0]
+
+				lineup.at[index, 'recFppg'] = recFppg
+				lineup.at[index, 'varFppg'] = recVar
 
 		return lineup_df_list
 
@@ -535,6 +624,8 @@ class App():
 
 		return lineup_df
 
+
+
 	def create_lineup_from_history(self):
 		print "--------------------------"
 		print "Creating a lineup using data from the past ", self.num_recent_games, " games..."
@@ -571,7 +662,6 @@ class App():
 			formatted_img = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(img))
 			self.formatted_img_list.append(formatted_img)	
 
-
 	def update_selected_games(self, team_num):
 
 		i = team_num/2
@@ -590,8 +680,6 @@ class App():
 
 		#Execute the window's main loop
 		self.window.mainloop()
-
-
 
 
 
