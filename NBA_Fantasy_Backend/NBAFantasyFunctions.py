@@ -7,6 +7,9 @@ from BS4Functions import *
 import csv
 import pandas
 from PandasFunctions import *
+import random
+from copy import deepcopy
+import itertools
 
 from sys import version_info
 from datetime import date
@@ -54,7 +57,6 @@ NBA Functions
 
 def get_schedule(url, date_of_interest):
 	today = convert_date(date_of_interest)
-
 	schedule_soup = soupify(url)
 	table = schedule_soup.find('table', class_="stats_table")
 	table_body = table.find('tbody')
@@ -540,10 +542,13 @@ def get_ppg(stats):
 
 	return df
 
-def get_ppd(avail_players, salary):
+def get_ppd(player_totals, salary):
+
+	player_ppg = get_ppg(player_totals)
+
 	# calculate PPD
 	# possible that merge is not working because rows differ (there is an index missing)
-	players_ppd = avail_players.merge(salary, on='Player')
+	players_ppd = player_ppg.merge(salary, on='Player')
 	players_ppd['PPD'] = players_ppd['PPG'] / players_ppd["Salary"].astype(float)
 	players_ppd = players_ppd.sort_values(by="PPD", ascending=False)
 	players_ppd = players_ppd[players_ppd["PPD"] != 0]
@@ -728,6 +733,32 @@ def get_opp_scaling():
 
 	return opp_scaling_df
 
+
+	#returns a list of best lineup according to greedy algorithm)
+def dk_knapsack(avail_players, squad):
+	current_sal = 0
+
+	for position in squad:
+
+		groupby_position = avail_players.groupby(position[0])
+		candidates = groupby_position.get_group(1)
+		candidates = candidates.sort_values(by=['Fppd'], ascending=False)
+		candidates = candidates.reset_index(drop=True)
+
+		for i, row in candidates.iterrows():
+			player = row['Player']
+			salary = float(row['Salary'])
+
+			used_players = [x[1] for x in squad]
+			if (player not in used_players) and (current_sal + salary < salary_cap):
+
+				position[1] = player
+				current_sal = current_sal + salary
+				break
+
+
+	return squad
+
 def stringify_lineup(line):
 	go_2 = range(2)
 	positions = ["Point Guards", "Shooting Guard", "Small Forwards", "Power Forwards", "Center"]
@@ -794,8 +825,8 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 	if(scaling is not None):
 		player_totals = get_scaled_stats(player_dataset, scaling, game_list)
 
-	player_ppg = get_ppg(player_totals)
-	player_ppd = get_ppd(player_ppg, salary_df)
+	#player_ppg = get_ppg(player_totals)
+	player_ppd = get_ppd(player_totals, salary_df)
 	player_ppd = player_ppd.sort_values(by=['PPD'], ascending=True)
 	player_ppd.to_csv("player_ppd.csv")
 
@@ -818,3 +849,77 @@ def create_lineup(player_dataset, salary_df, game_list, scaling=None):
 #	pretty_lineup = stringify_lineup(lineup)
 #	print pretty_lineup
 #	uninjured_pretty = manual_drop(player_ppd, pretty_lineup, salary_df)
+
+def create_dk_lineup(dk_dataset):
+
+	dk_dataset['Fppd'] = dk_dataset['Fppg'] / dk_dataset['Salary'].astype(float)
+	dk_dataset = dk_dataset.sort_values(by="Fppd", ascending=False)
+	dk_dataset = dk_dataset[dk_dataset["Fppd"] != 0]
+
+	dk_dataset.to_csv("dk_ppd.csv", sep=",")
+
+
+	squad = [['SF', None], ['UTIL', None], ['F', None], ['PG', None], ['G', None], ['C', None], ['SG', None], ['PF', None]]
+
+	#squad_list = [squad]
+	squad_list = list(itertools.permutations(squad))
+	lineup_df_list = []
+	#for i in range(0,24):
+
+
+	i = 0
+	maxFPPG = 0
+
+	if(False):
+		# search squad list for max fppg
+		for squad in squad_list:
+			# number of lineups to search
+			i = i+1
+			if(i>2000):
+				break#
+
+			lineup = dk_knapsack(dk_dataset, squad)#
+
+			playerstats = []
+			for position in lineup:
+				player = position[1]
+				stats = dk_dataset.loc[dk_dataset['Player'] == player]
+				stats['POS'] = position[0]
+				playerstats.append(stats)#
+
+			lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)
+			sum_fppg = round(lineup_df["Fppg"].sum(), 2)#
+			salary = float(lineup_df["Salary"].sum())
+
+			if(sum_fppg > maxFPPG) and (salary < salary_cap):
+				maxFPPG = sum_fppg
+				print "max fppg: ", maxFPPG, " salary = ", salary
+
+	maxFPPG = 301
+
+	print "Building squad list"
+	for squad in squad_list:
+		# now find 24 highest fppg squads
+		if(len(lineup_df_list) > 23):
+			break
+
+		lineup = dk_knapsack(dk_dataset, squad)
+
+		playerstats = []
+		for position in lineup:
+			player = position[1]
+			stats = dk_dataset.loc[dk_dataset['Player'] == player]
+			stats['POS'] = position[0]
+			playerstats.append(stats)
+
+		lineup_df = pandas.concat(playerstats, axis=0, ignore_index=True)
+		sum_fppg = round(lineup_df["Fppg"].sum(), 2)
+		salary = float(lineup_df["Salary"].sum())
+
+		if(sum_fppg > maxFPPG - 5) and (salary < salary_cap):
+			print "Found squad with ffpg = ", sum_fppg
+			lineup_df_list.append(lineup_df)
+
+	print "Found 24 squads. Building tables."
+
+	return lineup_df_list

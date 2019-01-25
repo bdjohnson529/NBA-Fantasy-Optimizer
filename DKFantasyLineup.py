@@ -12,6 +12,7 @@ import Tkinter as tkinter
 from Tkinter import Tk, Label, Button, Scrollbar
 import tkFont as font
 
+import sys
 
 import logging
 from timeit import default_timer as timer
@@ -19,6 +20,7 @@ from timeit import default_timer as timer
 NUM_RECENT_GAMES = 10
 
 salary_path = "/home/ben/NBA-Fantasy-Optimizer/DKSalaries.csv"
+injury_list_path = "/home/ben/NBA-Fantasy-Optimizer/historic_stats/injuries.txt"
 img_path = "/home/ben/NBA-Fantasy-Optimizer/img/logos/"
 
 save_dir = "/home/ben/NBA-Fantasy-Optimizer/historic_stats"
@@ -56,6 +58,7 @@ class App():
 
 		self.recentMatchPanel	= None
 		self.salaryPathPanel	= None
+		self.injuryListPanel	= None
 		self.saveEntryPanel		= None
 
 		self.formatted_img_list = []
@@ -63,6 +66,8 @@ class App():
 
 		self.game_list 			= game_list
 		self.selected_game_list = deepcopy(game_list)
+		self.injury_list 		= None
+
 		self.img_path			= img_path
 		self.salary_path 		= salary_path
 
@@ -129,33 +134,140 @@ class App():
 		saveEntryPanel = tkinter.Entry(actionsFrame, width=50)
 		saveEntryPanel.insert(0, save_dir)
 		saveEntryPanel.grid(row=1, column=0, sticky="w")
-		actionsFrame.rowconfigure(1, minsize=50)
+		actionsFrame.rowconfigure(1, minsize=30)
 		setattr(self, 'saveEntryPanel', saveEntryPanel)
 
 		tkinter.Label(actionsFrame, text="Location of salary file:").grid(row=2, column=0, sticky="w")
 		salaryPathPanel = tkinter.Entry(actionsFrame, width=50)
 		salaryPathPanel.insert(0, salary_path)
 		salaryPathPanel.grid(row=3, column=0, sticky="w")
-		actionsFrame.rowconfigure(3, minsize=50)
+		actionsFrame.rowconfigure(3, minsize=30)
 		setattr(self, 'salaryPathPanel', salaryPathPanel)
 
+		tkinter.Label(actionsFrame, text="Location of injury list:").grid(row=4, column=0, sticky="w")
+		injuryListPanel = tkinter.Entry(actionsFrame, width=50)
+		injuryListPanel.insert(0, injury_list_path)
+		injuryListPanel.grid(row=5, column=0, sticky="w")
+		actionsFrame.rowconfigure(5, minsize=30)
+		setattr(self, 'injuryListPanel', injuryListPanel)
+
+		tkinter.Button(actionsFrame, text="Get Injured Players", width = 20, height=1,
+			command= self.get_injury_list).grid(row=5, column=1, sticky="w")
+
 		#tkinter.Canvas(actionsFrame, width=20, height=100).grid(row=4, column=0, sticky="w")
-		tkinter.Label(actionsFrame, text="Number of recent matches to use:").grid(row=4, column=0, sticky="w")
+		tkinter.Label(actionsFrame, text="Number of recent matches to use:").grid(row=6, column=0, sticky="w")
 		recentMatchPanel = tkinter.Entry(actionsFrame)
 		recentMatchPanel.insert(0, NUM_RECENT_GAMES)
-		recentMatchPanel.grid(row=5, column=0, sticky="w")
-		actionsFrame.rowconfigure(5, minsize=50)
+		recentMatchPanel.grid(row=7, column=0, sticky="w")
+		actionsFrame.rowconfigure(7, minsize=30)
 		setattr(self, 'recentMatchPanel', recentMatchPanel)
 
-		tkinter.Button(actionsFrame, text="Update settings", width = 25, height=2, font=helv36,
-			command= self.update_settings).grid(row=6, column=0, sticky="w")
+		tkinter.Button(actionsFrame, text="Update settings", width = 20, height=1,
+			command= self.update_settings).grid(row=7, column=1, sticky="w")
 
-		tkinter.Canvas(actionsFrame, width=40, height=100).grid(row=7, column=0, sticky="w")
+		tkinter.Canvas(actionsFrame, width=7, height=100).grid(row=8, column=0, sticky="w")
 
-		tkinter.Button(actionsFrame, text="Lineup from Season", width = 50, height=4, font=helv36,
-			command= lambda i=0: self.LineupPage(i)).grid(row=8, column=0, sticky="w")
-		tkinter.Button(actionsFrame, text="Lineup from Recent Data", width = 50, height=4, font=helv36,
-			command= lambda i=1: self.LineupPage(i)).grid(row=9, column=0, sticky="w")
+		lineupButtonFrame = tkinter.Frame(actionsFrame)
+		lineupButtonFrame.grid(row=9, column=0, sticky='ns')
+
+		tkinter.Button(lineupButtonFrame, text="Lineup from Season", width = 50, height=4, font=helv36,
+			command= lambda i=0: self.LineupPage(i)).grid(row=1, column=0, sticky="w")
+		tkinter.Button(lineupButtonFrame, text="Lineup from Recent Data", width = 50, height=4, font=helv36,
+			command= lambda i=1: self.LineupPage(i)).grid(row=2, column=0, sticky="w")
+		tkinter.Button(lineupButtonFrame, text="Lineup from DraftKings Data", width = 50, height=4, font=helv36,
+			command= self.DKLineupPage).grid(row=3, column=0, sticky="w")
+
+	def DrawLineupTable(self, frame, lineup_df):
+
+		grouped_df = lineup_df.groupby(['POS'], as_index=False)
+
+		####
+		## heading
+		####
+		nameLabel = Label(frame, text="Player")
+		nameLabel.grid(row=0, column=0)
+
+		positionLabel = Label(frame, text="Position")
+		positionLabel.grid(row=0, column=1)
+
+		fppgLabel = Label(frame, text="FPPG")
+		fppgLabel.grid(row=0, column=2)
+
+		teamLabel = Label(frame, text="Team")
+		teamLabel.grid(row=0, column=3)
+
+		salaryLabel = Label(frame, text="Salary")
+		salaryLabel.grid(row=0, column=4)
+
+		####
+		## data
+		####
+		rowNum = 0
+		for name, group in grouped_df:
+
+			group = group.reset_index(drop=True)
+
+
+			rows = group.shape[0]
+			for i in range(0, rows):
+				rowNum = rowNum + 1
+
+				playerName = group.loc[i,"Player"]
+				playerNameLabel = Label(frame, text=playerName)
+				playerNameLabel.grid(row=rowNum, column=0)
+
+				position = group.loc[i, "POS"]
+				positionLabel = Label(frame, text=position)
+				positionLabel.grid(row=rowNum, column=1)
+
+				fppg = group.loc[i, "Fppg"]
+				fppg = round(fppg, 2)
+				fppgLabel = Label(frame, text=fppg)
+				fppgLabel.grid(row=rowNum, column=2)
+
+				team = group.loc[i, "Tm"]
+				teamLabel = Label(frame, text=team)
+				teamLabel.grid(row=rowNum, column=3)
+
+				salary = group.loc[i, "Salary"]
+				salaryLabel = Label(frame, text=salary)
+				salaryLabel.grid(row=rowNum, column=4)
+
+		sum_fppg = round(lineup_df["Fppg"].sum(), 2)
+		sum_salary = lineup_df["Salary"].sum()
+
+		rowNum = rowNum + 2
+
+		sumFPPGLabel = Label(frame, text=sum_fppg)
+		sumFPPGLabel.grid(row=rowNum, column=2)
+
+		sumSalaryLabel = Label(frame, text=sum_salary)
+		sumSalaryLabel.grid(row=rowNum, column=4)
+
+
+
+	def DKLineupPage(self):
+
+		self.window.title("View lineups")
+
+		if self.bodyFrame is not None:
+			self.bodyFrame.destroy()
+
+		self.bodyFrame = tkinter.Frame(self.window)
+		self.bodyFrame.pack()
+
+		lineup_df_list = self.create_lineup_from_dk()
+
+		i = 0
+		for lineup_df in lineup_df_list:
+			lineupFrame = tkinter.Frame(self.bodyFrame)
+			lineupFrame.grid(row=i/6, column=i%6, sticky='ns')
+
+			self.DrawLineupTable(lineupFrame, lineup_df)
+
+			i = i+1
+
+
 
 	def LineupPage(self, option):
 
@@ -174,6 +286,9 @@ class App():
 		elif(option==1):
 			print "Creating lineup from historical data."
 			lineup_df = self.create_lineup_from_history()
+		elif(option==2):
+			print "Creating lineup from DraftKings data."
+			lineup_df = self.create_lineup_from_dk()
 
 		playerdataFrame = tkinter.Frame(self.bodyFrame)
 		playerdataFrame.grid(row=0, column=0, sticky='ns')
@@ -182,10 +297,6 @@ class App():
 		print lineup_df
 
 		grouped_df = lineup_df.groupby(['POS'], as_index=False)
-
-		print "GROUPED SIZE ===== ",
-		print "************************"
-		print len(grouped_df)
 
 		####
 		## heading
@@ -213,8 +324,6 @@ class App():
 
 			group = group.reset_index(drop=True)
 
-			print "****************"
-			print "GROUP NAME === ", name
 
 			rows = group.shape[0]
 			for i in range(0, rows):
@@ -224,15 +333,11 @@ class App():
 				playerNameLabel = Label(playerdataFrame, text=playerName)
 				playerNameLabel.grid(row=rowNum, column=0)
 
-				print "player name ==== ", playerName
-				print "ROWNUM = ", rowNum
-				print "\n"
-
 				position = group.loc[i, "POS"]
 				positionLabel = Label(playerdataFrame, text=position)
 				positionLabel.grid(row=rowNum, column=1)
 
-				fppg = group.loc[i, "PPG"]
+				fppg = group.loc[i, "Fppg"]
 				fppg = round(fppg, 2)
 				fppgLabel = Label(playerdataFrame, text=fppg)
 				fppgLabel.grid(row=rowNum, column=2)
@@ -244,6 +349,17 @@ class App():
 				salary = group.loc[i, "Salary"]
 				salaryLabel = Label(playerdataFrame, text=salary)
 				salaryLabel.grid(row=rowNum, column=4)
+
+		sum_fppg = round(lineup_df["Fppg"].sum(), 2)
+		sum_salary = lineup_df["Salary"].sum()
+
+		rowNum = rowNum + 2
+
+		sumFPPGLabel = Label(playerdataFrame, text=sum_fppg)
+		sumFPPGLabel.grid(row=rowNum, column=2)
+
+		sumSalaryLabel = Label(playerdataFrame, text=sum_salary)
+		sumSalaryLabel.grid(row=rowNum, column=4)
 
 
 	def update_settings(self):
@@ -267,12 +383,90 @@ class App():
 		else:
 			self.salary_path = salaryPathString
 
+	def get_injury_list(self):
+		injuryListFile = self.injuryListPanel.get()
+
+		injury_list = []
+		with open(injured_file, 'r') as f:
+
+			players = f.readlines()
+			for player in players:
+				injury_list.append(player.strip())
+
+		self.injury_list = injury_list
+
+		print "Injured players = ", injury_list
+
+
 	def check_files(self, salaryFilePath):
 		salary_file = Path(salaryFilePath)
 		if not salary_file.is_file():
 			return False
 		else:
 			return True
+
+	def create_lineup_from_dk(self):
+
+
+		if not self.check_files(self.salary_file):
+			print "No salary file found. Please download salary CSV from DraftKings"
+
+		print "--------------------------"
+		print "Creating lineup based on DraftKings data"
+
+		dk_df = pandas.read_csv(salary_file)
+
+		columnNames = dk_df.columns.tolist()
+		columnNames[2] = 'Player'
+		columnNames[4] = 'Pos Options'
+		columnNames[7] = 'Tm'
+		columnNames[8] = 'Fppg'
+
+		dk_df.columns = columnNames
+
+		dk_df['SG'] = 0
+		dk_df['PG'] = 0
+		dk_df['G'] = 0
+		dk_df['C'] = 0
+		dk_df['SF'] = 0
+		dk_df['PF'] = 0
+		dk_df['F'] = 0
+		dk_df['UTIL'] = 1
+
+		for index, row in dk_df.iterrows():
+			posOptions = row['Pos Options'].split('/')
+
+			if('SG' in posOptions):
+				dk_df.at[index, 'SG'] = 1
+			if('PG' in posOptions):
+				dk_df.at[index, 'PG'] = 1
+			if('G' in posOptions):
+				dk_df.at[index, 'G'] = 1
+			if('C' in posOptions):
+				dk_df.at[index, 'C'] = 1
+			if('SF' in posOptions):
+				dk_df.at[index, 'SF'] = 1
+			if('PF' in posOptions):
+				dk_df.at[index, 'PF'] = 1
+			if('F' in posOptions):
+				dk_df.at[index, 'F'] = 1
+
+		# Crawling the injury list can take up to 11 seconds
+		# To save time the user can read injury list from a text file
+		if(self.injury_list == None):
+			self.injury_list = get_injured_players(self.selected_game_list)
+
+		dk_df = dk_df[~dk_df['Player'].isin(self.injury_list)]
+		dk_df = dk_df.reset_index(drop=True)
+
+		dk_df.to_csv("dk.csv", sep=",")
+
+		#opp_scaling_df = self.get_scaling()
+		salary_df = self.get_salary()
+
+		lineup_df_list = create_dk_lineup(dk_df)
+
+		return lineup_df_list
 
 
 	def create_lineup_from_season(self):
@@ -307,6 +501,8 @@ class App():
 		# season_advanced_df = get_season_stats(season_advanced_url)
 		# advanced_desc_df = get_desc_stats(season_advanced_df)
 
+		print season_df
+
 		players_data_list = []
 		for match in self.selected_game_list:
 			home = match[0]
@@ -321,11 +517,12 @@ class App():
 
 		# drop inujured players from table
 		#injured_list = get_injured_players(self.selected_game_list)
-
 		injured_list = []
 		with open(injured_file, 'r') as f:
-			player = f.readline()
-			injured_list.append(player)
+
+			players = f.readlines()
+			for player in players:
+				injured_list.append(player.strip())
 
 
 		players_df = players_df[~players_df['Player'].isin(injured_list)]
@@ -427,8 +624,30 @@ if __name__ == "__main__":
 
 	print "\nFetching NBA statistics and determining optimal lineup...\n\n"
 
+	game_list = []
 	todays_date = str(date.today())
 	game_list = get_schedule(nba_schedule_url, todays_date)
+
+#	internet = str(sys.argv[1])
+#	if(internet == "offline"):
+#		with open(save_dir + "/schedule.txt", 'r') as f:
+#			ok = f.readlines()
+#		# attempt to access text file
+#		with open(save_dir + "/schedule.txt", 'r') as f:
+#			games = f.readlines()
+#			for game in games:
+#				teams = game.strip().split("'")
+#				match = [teams[1], teams[3]]
+#				game_list.append(match)
+#	else:
+#		# access game list and write to text file
+#		game_list = get_schedule(nba_schedule_url, todays_date)
+#		f = open(save_dir+"/schedule.txt", "w")
+#		for game in game_list:
+#			print "GAME == ", str(game)
+#			f.write(str(game) + "\n")
+#		f.close()
+
 	print "Games played today, ", str(todays_date), " include..."
 	print game_list
 	print "\n\n"
