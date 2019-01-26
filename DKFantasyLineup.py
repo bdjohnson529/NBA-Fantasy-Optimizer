@@ -61,6 +61,15 @@ class App():
 		self.injuryListPanel	= None
 		self.saveEntryPanel		= None
 
+		# custom lineup page
+		self.pgEntryPanel		= None
+		self.sgEntryPanel		= None
+		self.gEntryPanel		= None
+		self.pfEntryPanel		= None
+		self.sfEntryPanel		= None
+		self.fEntryPanel		= None
+		self.utilEntryPanel		= None
+
 		self.formatted_img_list = []
 		self.abbv_list 			= None
 
@@ -68,6 +77,7 @@ class App():
 		self.selected_game_list = deepcopy(game_list)
 		self.injury_list 		= None
 		self.playersRecentData  = None
+		self.player_list 		= None
 
 		self.img_path			= img_path
 		self.salary_path 		= salary_path
@@ -175,20 +185,31 @@ class App():
 			command= self.save_injury_list).grid(row=0, column=0, sticky="w")
 		tkinter.Button(configureFrame, text="Save Injury List to File", width = 35, height=1,
 			command= self.save_injury_list).grid(row=0, column=2, sticky="w")
+
 		tkinter.Button(configureFrame, text="Get Recent Player Performance from Internet", width = 35, height=1,
 			command= self.calculate_player_performance).grid(row=1, column=0, sticky="w")
 		tkinter.Button(configureFrame, text="Save Recent Player Stats to File", width = 35, height=1,
 			command= self.save_player_performance).grid(row=1, column=2, sticky="w")
 		tkinter.Button(configureFrame, text="Load Recent Player Stats from File", width = 35, height=1,
-			command= self.load_player_performance).grid(row=1, column=1, sticky="w")		
+			command= self.load_player_performance).grid(row=1, column=1, sticky="w")
+
+		tkinter.Button(configureFrame, text="Get Player List", width = 35, height=1,
+			command= self.get_player_list).grid(row=2, column=0, sticky="w")
+		tkinter.Button(configureFrame, text="Save Player List to File", width = 35, height=1,
+			command= self.save_player_list).grid(row=2, column=2, sticky="w")
+		tkinter.Button(configureFrame, text="Load Player List from File", width = 35, height=1,
+			command= self.load_player_list).grid(row=2, column=1, sticky="w")		
+
 
 		tkinter.Canvas(actionsFrame, width=7, height=50).grid(row=10, column=0, sticky="w")
 
 		lineupButtonFrame = tkinter.Frame(actionsFrame)
 		lineupButtonFrame.grid(row=11, column=0, sticky='ns')
 
-		tkinter.Button(lineupButtonFrame, text="Lineup from Season", width = 50, height=4, font=helv36,
+		tkinter.Button(lineupButtonFrame, text="Lineup from Basketball Reference Data", width = 50, height=4, font=helv36,
 			command= lambda i=0: self.LineupPage(i)).grid(row=1, column=0, sticky="w")
+		tkinter.Button(lineupButtonFrame, text="Custom Lineup", width = 50, height=4, font=helv36,
+			command= self.customLineupPage).grid(row=2, column=0, sticky="w")
 		tkinter.Button(lineupButtonFrame, text="Lineup from DraftKings Data", width = 50, height=4, font=helv36,
 			command= self.DKLineupPage).grid(row=3, column=0, sticky="w")
 
@@ -310,6 +331,92 @@ class App():
 
 			i = i+1
 
+	def customLineupPage(self):
+
+		self.window.title("Create a custom lineup")
+
+		if self.bodyFrame is not None:
+			self.bodyFrame.destroy()
+
+		self.bodyFrame = tkinter.Frame(self.window)
+		self.bodyFrame.pack()
+
+		lineupEntryFrame = tkinter.Frame(self.bodyFrame)
+		lineupEntryFrame.pack()
+
+		tkinter.Label(lineupEntryFrame, text="Point Guard:").grid(row=0, column=0, sticky="w")
+		self.pgEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.pgEntryPanel.grid(row=0, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Shooting Guard:").grid(row=1, column=0, sticky="w")
+		self.sgEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.sgEntryPanel.grid(row=1, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Guard:").grid(row=2, column=0, sticky="w")
+		self.gEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.gEntryPanel.grid(row=2, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Power Forward:").grid(row=3, column=0, sticky="w")
+		self.pfEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.pfEntryPanel.grid(row=3, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Small Forward:").grid(row=4, column=0, sticky="w")
+		self.sfEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.sfEntryPanel.grid(row=4, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Forward:").grid(row=5, column=0, sticky="w")
+		self.fEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.fEntryPanel.grid(row=5, column=1, sticky="w")
+
+		tkinter.Label(lineupEntryFrame, text="Util:").grid(row=6, column=0, sticky="w")
+		self.utilEntryPanel = tkinter.Entry(lineupEntryFrame, width=30)
+		#pgEntryPanel.insert(0, save_dir)
+		self.utilEntryPanel.grid(row=6, column=1, sticky="w")
+
+		tkinter.Button(lineupEntryFrame, text="Add Players", width = 20, height=1,
+			command= self.updateLineup).grid(row=7, column=1, sticky="w")
+
+
+		lineupDisplayFrame = tkinter.Frame(self.bodyFrame)
+		lineupDisplayFrame.pack()
+
+		self.bodyFrame = tkinter.Frame(self.window)
+		self.bodyFrame.pack()
+
+	def updateLineup(self):
+		pg_new 		= self.pgEntryPanel.get()
+		sg_new 		= self.sgEntryPanel.get()
+		g_new		= self.gEntryPanel.get()
+		pf_new 		= self.pfEntryPanel.get()
+		sf_new 		= self.sfEntryPanel.get()
+		f_new		= self.fEntryPanel.get()
+		util_new	= self.utilEntryPanel.get()
+
+
+		d = {}
+		if(pg_new in self.player_list):
+			d['PG'] = pg_new
+		if(sg_new in self.player_list):
+			d['SG'] = sg_new
+		if(g_new in self.player_list):
+			d['G'] = g_new
+		if(pf_new in self.player_list):
+			d['PF'] = pf_new
+		if(sf_new in self.player_list):
+			d['SF'] = sf_new
+		if(f_new in self.player_list):
+			d['F'] = f_new
+		if(util_new in self.player_list):
+			d['UTIL'] = util_new	
+
+		return d
+
 	def calculate_player_performance(self):
 		players_recent_summary = get_historic_stats(self.selected_game_list, todays_date, x=self.num_recent_games)
 
@@ -333,6 +440,42 @@ class App():
 		print players_recent_summary
 
 		self.playersRecentData = players_recent_summary
+
+
+	def get_player_list(self):
+		players_df = get_historic_stats(self.selected_game_list, todays_date, x=1)
+
+		self.players_list = players_df['Player'].tolist()
+
+		playersFile = save_dir + "/playerlist.txt"
+		with open(playersFile, 'w') as f:
+			for player in self.players_list:
+				f.write(player + "\n")
+
+		print self.players_list
+
+
+	def save_player_list(self):
+		if(self.players_list is None):
+			print "No players list loaded."
+			return
+
+		playersFile = save_dir + "/playerlist.txt"
+		with open(playersFile, 'w') as f:
+			for player in self.players_list:
+				f.write(player + "\n")
+
+	def load_player_list(self):
+		playersFile = save_dir + "/playerlist.txt"
+
+		self.player_list = []
+		with open(playersFile, 'r') as f:
+			players = f.readlines()
+			for player in players:
+				self.player_list.append(player.strip())
+
+		print self.player_list
+
 
 
 	def LineupPage(self, option):
